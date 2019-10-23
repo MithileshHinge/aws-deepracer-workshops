@@ -457,8 +457,11 @@ def analyze_training_progress(aggregates, title=None):
     plt.clf()
 
 
-def plot(ax, df, xval, xlabel, yval, ylabel, title=None):
-    df.plot.scatter(xval, yval, ax=ax, s=5, alpha=0.7)
+def plot(ax, df, xval, xlabel, yval, ylabel, title=None, clabel=None):
+    if clabel:
+        df.plot.scatter(xval, yval, ax=ax, c=clabel, s=5, alpha=0.7, colormap='viridis')
+    else:
+        df.plot.scatter(xval, yval, ax=ax)#, s=5, alpha=0.7)
     if title:
         ax.set_title(title)
     ax.set_ylabel(ylabel)
