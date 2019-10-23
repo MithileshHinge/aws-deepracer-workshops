@@ -25,6 +25,9 @@ from matplotlib.collections import PatchCollection
 from matplotlib.patches import Rectangle
 from shapely.geometry.polygon import LineString
 from sklearn.preprocessing import MinMaxScaler
+import bisect
+from shapely.geometry import Point
+from shapely.geometry.polygon import LinearRing
 
 import cw_utils as cw
 
@@ -512,40 +515,38 @@ def download_and_analyse_multiple_race_evaluations(log_folder, l_inner_border, l
 
     analyse_multiple_race_evaluations(logs, l_inner_border, l_outer_border, min_progress=min_progress)
 
-
-def df_to_params(df_row, waypoints):
+def find_prev_next_waypoints(center_dists, ndist):
+    next_index = bisect.bisect_right(center_dists, ndist)
+    prev_index = next_index - 1
+    if next_index == len(center_dists): next_index = 0
+    return prev_index, next_index
+                                      
+def df_to_params(df_row, l_center_line, l_inner_border, l_outer_border):
     from track_utils import get_vector_length, \
         get_a_point_on_a_line_closest_to_point, is_point_on_the_line
-    waypoint = df_row['closest_waypoint']
-    before = waypoint - 1
-    if waypoints[waypoint].tolist() == waypoints[before].tolist():
-        before -= 1
-    after = (waypoint + 1) % len(waypoints)
-
-    if waypoints[waypoint].tolist() == waypoints[after].tolist():
-        after = (after + 1) % len(waypoints)
-
+    
+    center_line = LinearRing(l_center_line)
+    inner_border = LinearRing(l_inner_border)
+    outer_border = LinearRing(l_outer_border)
+    
     current_location = np.array([df_row['x'], df_row['y']])
-
-    closest_point = get_a_point_on_a_line_closest_to_point(
-        waypoints[before],
-        waypoints[waypoint],
-        [df_row['x'], df_row['y']]
-    )
-
-    if is_point_on_the_line(waypoints[before][0], waypoints[before][1],
-                            waypoints[waypoint][0], waypoints[waypoint][1],
-                            closest_point[0], closest_point[1]):
-        closest_waypoints = [before, waypoint]
-    else:
-        closest_waypoints = [waypoint, after]
-
-        closest_point = get_a_point_on_a_line_closest_to_point(
-            waypoints[waypoint],
-            waypoints[after],
-            [df_row['x'], df_row['y']]
-        )
-
+    model_point = Point(df_row['x'], df_row['y'])
+    center_dists = [center_line.project(Point(p), normalized=True) for p in center_line.coords[:-1]] + [1.0]
+    current_ndist = center_line.project(model_point, normalized=True)
+    prev_index, next_index = find_prev_next_waypoints(center_dists, current_ndist)
+    distance_from_prev = model_point.distance(Point(center_line.coords[prev_index]))
+    distance_from_next = model_point.distance(Point(center_line.coords[next_index]))
+    closest_waypoint_index = (prev_index, next_index)[distance_from_next < distance_from_prev]
+    
+    nearest_point_center = center_line.interpolate(current_ndist, normalized=True)
+    nearest_point_inner = inner_border.interpolate(inner_border.project(nearest_point_center))
+    nearest_point_outer = outer_border.interpolate(outer_border.project(nearest_point_center))
+    distance_from_center = nearest_point_center.distance(model_point)
+    distance_from_inner = nearest_point_inner.distance(model_point)
+    distance_from_outer = nearest_point_outer.distance(model_point)
+    track_width = nearest_point_inner.distance(nearest_point_outer)
+    is_left_of_center = distance_from_inner < distance_from_outer
+        
     params = {
         'x': df_row['x'] / 100,
         'y': df_row['y'] / 100,
@@ -553,28 +554,21 @@ def df_to_params(df_row, waypoints):
         'steps': df_row['steps'],
         'progress': df_row['progress'],
         'heading': df_row['yaw'] * 180 / 3.14,
-        'closest_waypoints': closest_waypoints,
+        'closest_waypoints': [prev_index, next_index],
         'steering_angle': df_row['steer'] * 180 / 3.14,
-        'waypoints': waypoints / 100,
-        'distance_from_center':
-            get_vector_length(
-                (
-                        closest_point
-                        -
-                        current_location
-                ) / 100),
+        'waypoints': list(center_line.coords),
+        'distance_from_center': distance_from_center,
         'timestamp': df_row['timestamp'],
+        'track_width': track_width,
+        'is_left_of_center': is_left_of_center,
         # TODO I didn't need them yet. DOIT
-        'track_width': 0.60,
-        'is_left_of_center': None,
         'all_wheels_on_track': True,
         'is_reversed': False,
     }
 
     return params
 
-
-def new_reward(panda, center_line, reward_module, verbose=False):
+def new_reward(panda, center_line,  inner_border, outer_border, reward_module, verbose=False):
     import importlib
     importlib.invalidate_caches()
     rf = importlib.import_module(reward_module)
@@ -585,7 +579,7 @@ def new_reward(panda, center_line, reward_module, verbose=False):
     new_rewards = []
     for index, row in panda.iterrows():
         new_rewards.append(
-            reward.reward_function(df_to_params(row, center_line)))
+            reward.reward_function(df_to_params(row, center_line, inner_border, outer_border)))
 
     panda['new_reward'] = new_rewards
 
