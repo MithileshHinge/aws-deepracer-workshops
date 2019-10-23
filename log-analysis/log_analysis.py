@@ -525,12 +525,12 @@ def df_to_params(df_row, l_center_line, l_inner_border, l_outer_border):
     from track_utils import get_vector_length, \
         get_a_point_on_a_line_closest_to_point, is_point_on_the_line
     
-    center_line = LinearRing(l_center_line)
-    inner_border = LinearRing(l_inner_border)
-    outer_border = LinearRing(l_outer_border)
+    center_line = LinearRing((l_center_line/100))
+    inner_border = LinearRing((l_inner_border/100))
+    outer_border = LinearRing((l_outer_border/100))
     
-    current_location = np.array([df_row['x'], df_row['y']])
-    model_point = Point(df_row['x'], df_row['y'])
+    current_location = np.array([df_row['x']/100, df_row['y']/100])
+    model_point = Point(df_row['x']/100, df_row['y']/100)
     center_dists = [center_line.project(Point(p), normalized=True) for p in center_line.coords[:-1]] + [1.0]
     current_ndist = center_line.project(model_point, normalized=True)
     prev_index, next_index = find_prev_next_waypoints(center_dists, current_ndist)
