@@ -361,19 +361,26 @@ def simulation_agg(panda, firstgroup='iteration', add_timestamp=False, is_eval=F
     return result
 
 
-def scatter_aggregates(aggregate_df, title=None, is_eval=False):
+def scatter_aggregates(aggregate_df, title=None, is_eval=False, action_data=None, colormap=None):
     fig, axes = plt.subplots(nrows=2 if is_eval else 3, ncols=2 if is_eval else 3, figsize=[15, 11])
     if title:
         fig.suptitle(title)
     if not is_eval:
         aggregate_df.plot.scatter('time', 'reward', ax=axes[0, 2])
         aggregate_df.plot.scatter('time', 'new_reward', ax=axes[1, 2])
-        aggregate_df.plot.scatter('start_at', 'reward', ax=axes[2, 2])
-        aggregate_df.plot.scatter('start_at', 'progress', ax=axes[2, 0])
-        aggregate_df.plot.scatter('start_at', 'time_if_complete', ax=axes[2, 1])
+        if colormap == None:
+            aggregate_df.plot.scatter('start_at', 'reward', ax=axes[2, 2])
+            aggregate_df.plot.scatter('start_at', 'progress', ax=axes[2, 0])
+            aggregate_df.plot.scatter('start_at', 'time_if_complete', ax=axes[2, 1])
+        else:
+            aggregate_df.plot.scatter('start_at', 'reward', ax=axes[2, 2], c = 'iteration', colormap=colormap)
+            aggregate_df.plot.scatter('start_at', 'progress', ax=axes[2, 0], c = 'iteration', colormap=colormap')
+            aggregate_df.plot.scatter('start_at', 'time_if_complete', ax=axes[2, 1], c = 'iteration', colormap=colormap)
     aggregate_df.plot.scatter('time', 'progress', ax=axes[0, 0])
     aggregate_df.hist(column=['time'], bins=20, ax=axes[1, 0])
-    aggregate_df.plot.scatter('time', 'steps', ax=axes[0, 1])
+    #aggregate_df.plot.scatter('time', 'steps', ax=axes[0, 1])
+    action_data[action_data['iteration'] == 1].hist(column = ['action'], alpha = 0.5, ax=axes[0,1])
+    action_data[action_data['iteration'] == action_data['iteration'].max()].hist(column = ['action'], alpha = 0.5, ax=axes[0,1])
     aggregate_df.hist(column=['progress'], bins=20, ax=axes[1, 1])
 
     plt.show()
@@ -429,7 +436,7 @@ def analyze_training_progress(aggregates, title=None):
 
     plot(axes[0, 0], reward_per_iteration, 'iteration', 'Iteration', 'mean', 'Mean reward', 'Rewards per Iteration')
     plot(axes[1, 0], reward_per_iteration, 'iteration', 'Iteration', 'std', 'Std dev of reward', 'Dev of reward')
-    plot(axes[2, 0], aggregates, 'episode', 'Episode', 'reward', 'Total reward')
+    plot(axes[2, 0], aggregates, 'episode', 'Episode', 'reward', 'Total reward', clabel='start_at')
 
     plot(axes[0, 1], time_per_iteration, 'iteration', 'Iteration', 'mean', 'Mean time', 'Times per Iteration')
     plot(axes[1, 1], time_per_iteration, 'iteration', 'Iteration', 'std', 'Std dev of time', 'Dev of time')
