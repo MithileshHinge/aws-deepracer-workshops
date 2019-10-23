@@ -189,9 +189,13 @@ def v_color(ob):
     return color[ob.is_simple]
 
 
-def plot_coords(ax, ob):
+def plot_coords(ax, ob, wp=False):
     x, y = ob.xy
     ax.plot(x, y, '.', color='#999999', zorder=1)
+    if wp:
+        for i in range(len(x)):
+            if i % 3 == 0:
+                ax.annotate(i, (x[i],y[i]))
 
 
 def plot_bounds(ax, ob):
@@ -206,9 +210,9 @@ def plot_line(ax, ob, color='cyan'):
 
 
 def print_border(ax, waypoints, inner_border_waypoints, outer_border_waypoints,
-                 color='lightgrey'):
+                 color='lightgrey', wp=False):
     line = LineString(waypoints)
-    plot_coords(ax, line)
+    plot_coords(ax, line, wp=wp)
     plot_line(ax, line, color)
 
     line = LineString(inner_border_waypoints)
@@ -221,7 +225,7 @@ def print_border(ax, waypoints, inner_border_waypoints, outer_border_waypoints,
 
 
 def plot_top_laps(sorted_idx, episode_map, center_line, inner_border,
-                  outer_border, n_laps=5):
+                  outer_border, n_laps=5, wp=False):
     fig = plt.figure(n_laps, figsize=(12, n_laps * 10))
     for i in range(n_laps):
         idx = sorted_idx[i]
@@ -231,7 +235,7 @@ def plot_top_laps(sorted_idx, episode_map, center_line, inner_border,
         ax = fig.add_subplot(n_laps, 1, i + 1)
 
         line = LineString(center_line)
-        plot_coords(ax, line)
+        plot_coords(ax, line, wp=wp)
         plot_line(ax, line)
 
         line = LineString(inner_border)
