@@ -381,7 +381,7 @@ def scatter_aggregates(aggregate_df, title=None, is_eval=False, action_data=None
             aggregate_df.plot.scatter('start_at', 'time_if_complete', ax=axes[2, 1])
         else:
             aggregate_df.plot.scatter('start_at', 'reward', ax=axes[2, 2], c = 'iteration', colormap=colormap)
-            aggregate_df.plot.scatter('start_at', 'progress', ax=axes[2, 0], c = 'iteration', colormap=colormap')
+            aggregate_df.plot.scatter('start_at', 'progress', ax=axes[2, 0], c = 'iteration', colormap=colormap)
             aggregate_df.plot.scatter('start_at', 'time_if_complete', ax=axes[2, 1], c = 'iteration', colormap=colormap)
     aggregate_df.plot.scatter('time', 'progress', ax=axes[0, 0])
     aggregate_df.hist(column=['time'], bins=20, ax=axes[1, 0])
